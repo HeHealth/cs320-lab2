@@ -14,43 +14,46 @@ router.post('/', async (req, res) => {
   const newUser = new User({
     username: req.body.username,
     password: req.body.password,
-    role: req.body.role  // Make sure to get role from the request body
+    role: req.body.role
   });
 
-  // Save the user and generate a token
   await newUser.save();
-  const token = newUser.generateAuthToken();  // This method should be in your User model
-  console.log("Generated Token:", token);
-  console.log("Response Headers:", res.getHeaders());
-
-  // Send the token in the response
-  res.header('x-auth-token', token);
-  console.log("Response Headers After Setting Token:", res.getHeaders());
-  res.send({
+  const token = newUser.generateAuthToken();
+  res.header('x-auth-token', token).send({
     _id: newUser._id,
     username: newUser.username,
     role: newUser.role
   });
-
 });
 
 // Get current user
 router.get('/me', async (req, res) => {
   const token = req.header('x-auth-token');
-  console.log("Token:", token);  // Debugging line added here
-  
   if (!token) return res.status(401).send('Access denied. No token provided.');
   
   try {
-    const decoded = jwt.verify(token, 'your_jwt_secret_key');  
-    console.log("Decoded:", decoded);  // Debugging line added here
-    
-    const user = await User.findById(decoded._id).select('-password');  // Exclude password from the result
+    const decoded = jwt.verify(token, 'your_jwt_secret_key');
+    const user = await User.findById(decoded._id).select('-password');
     res.send(user);
   } catch (ex) {
     res.status(400).send('Invalid token.');
   }
 });
 
+// Sign in a user
+router.post('/signin', async (req, res) => {
+  const user = await User.findOne({ username: req.body.username });
+  if (!user) return res.status(400).send('Invalid username or password.');
+
+  const validPassword = await user.validatePassword(req.body.password);
+  if (!validPassword) return res.status(400).send('Invalid username or password.');
+
+  const token = user.generateAuthToken();
+  res.header('x-auth-token', token).send({
+    _id: user._id,
+    username: user.username,
+    role: user.role
+  });
+});
 
 module.exports = router;

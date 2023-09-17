@@ -16,5 +16,11 @@ userSchema.methods.generateAuthToken = function() {
   return token;
 };
 
+userSchema.methods.validatePassword = async function(inputPassword) {
+  // For demonstration purposes, a simple equality check is used.
+  // In a real-world application, you should use hashed passwords.
+  return this.password === inputPassword;
+};
+
 module.exports = mongoose.model('User', userSchema);
 
